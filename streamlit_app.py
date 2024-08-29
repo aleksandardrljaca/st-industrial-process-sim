@@ -168,20 +168,15 @@ def show_defects_analytics():
     plt.ylabel('Total Defects')
     plt.title(f'Heatmap of Defects for {selected_date}')
     st.pyplot(plt.gcf())
-def show_datasets():
-    st.subheader('Telemetry dataset')
-    st.dataframe(pd.read_json('data/telemetrydata'))
-    st.subheader('Defects dataset')
-    st.dataframe(pd.read_json('data/defectsdata'))
+
 def main():
     st.sidebar.title("Navigation")
-    selection = st.sidebar.radio("Go to", ["Telemetry data", "Defects data","Datasets"])
+    selection = st.sidebar.radio("Go to", ["Telemetry data", "Defects data"])
     
     if selection == "Telemetry data":
         show_telemetry_analytics()
     elif selection == "Defects data":
         show_defects_analytics()
-    elif selection == "Datasets":
-        show_datasets()
+    
 if __name__ == "__main__":
     main()
