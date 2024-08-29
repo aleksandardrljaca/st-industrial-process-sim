@@ -1,151 +1,187 @@
+# STREAMLIT APP FOR DATA VISUALIZATION
+# TO RUN TYPE streamlit run telemetry_analytics.py
 import streamlit as st
 import pandas as pd
-import math
-from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+def show_telemetry_analytics():
+    # Učitaj podatke
+    df = pd.read_csv('telemetry.csv')
+    #df = pd.read_json('http://localhost:3001/telemetrydata')
+    
+    # Pretvori kolone 'Date' i 'Start Time' u datetime format
+    df['Date'] = pd.to_datetime(df['Date']).dt.date
+    df['Start Time'] = pd.to_datetime(df['Start Time']).dt.time
+    df['End Time'] = pd.to_datetime(df['End Time']).dt.time
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+    # Postavi naslov i sidebar
+    st.title('Telemetry Data Dashboard')
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
-
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
-
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
-
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
+    st.sidebar.title("Filters")
+    # Koristi 'datetime.date' za selektovanje opsega datuma
+    date_range = st.sidebar.slider(
+        "Select Date Range",
+        min_value=df['Date'].min(),
+        max_value=df['Date'].max(),
+        value=(df['Date'].min(), df['Date'].max())
     )
 
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
+    # Filtriraj podatke prema selektovanom opsegu datuma
+    df_filtered = df[(df['Date'] >= date_range[0]) & (df['Date'] <= date_range[1])]
 
-    return gdp_df
+    # Prikaži osnovne informacije
+    total_records = len(df_filtered)
+    average_production_time = df_filtered['Production Time'].mean()
+    average_temperature = df_filtered['Temperature'].mean()
+    average_humidity = df_filtered['Humidity'].mean()
 
-gdp_df = get_gdp_data()
+    st.metric(label="Total Records", value=total_records)
+    st.metric(label="Average Production Time", value=f"{average_production_time:.2f} seconds")
+    st.metric(label="Average Temperature", value=f"{average_temperature:.1f} °C")
+    st.metric(label="Average Humidity", value=f"{average_humidity:.1f} %")
 
-# -----------------------------------------------------------------------------
-# Draw the actual page
+    # Grafikon proizvodnog vremena
+    st.subheader('Production Time over Time')
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=df_filtered, x=df_filtered.index, y='Production Time', marker='o')
+    plt.xticks(ticks=df_filtered.index[::int(len(df_filtered)/10)], labels=df_filtered['Start Time'][::int(len(df_filtered)/10)].astype(str), rotation=45)
+    plt.xlabel('Time')
+    plt.ylabel('Production Time (seconds)')
+    st.pyplot(plt.gcf())
 
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
+    # Grafikon temperature
+    st.subheader('Temperature over Time')
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=df_filtered, x=df_filtered.index, y='Temperature', marker='o', color='orange')
+    plt.xticks(ticks=df_filtered.index[::int(len(df_filtered)/10)], labels=df_filtered['Start Time'][::int(len(df_filtered)/10)].astype(str), rotation=45)
+    plt.xlabel('Time')
+    plt.ylabel('Temperature (°C)')
+    st.pyplot(plt.gcf())
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
+    # Grafikon vlažnosti
+    st.subheader('Humidity over Time')
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=df_filtered, x=df_filtered.index, y='Humidity', marker='o', color='blue')
+    plt.xticks(ticks=df_filtered.index[::int(len(df_filtered)/10)], labels=df_filtered['Start Time'][::int(len(df_filtered)/10)].astype(str), rotation=45)
+    plt.xlabel('Time')
+    plt.ylabel('Humidity (%)')
+    st.pyplot(plt.gcf())
 
-# Add some spacing
-''
-''
+    # Distribucija proizvodnog vremena
+    st.subheader('Distribution of Production Time')
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df_filtered['Production Time'], bins=20, kde=True)
+    plt.xlabel('Production Time (seconds)')
+    plt.ylabel('Frequency')
+    st.pyplot(plt.gcf())
 
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
+    # Distribucija temperature
+    st.subheader('Distribution of Temperature')
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df_filtered['Temperature'], bins=20, kde=True, color='orange')
+    plt.xlabel('Temperature (°C)')
+    plt.ylabel('Frequency')
+    st.pyplot(plt.gcf())
 
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
+    # Distribucija vlažnosti
+    st.subheader('Distribution of Humidity')
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df_filtered['Humidity'], bins=20, kde=True, color='blue')
+    plt.xlabel('Humidity (%)')
+    plt.ylabel('Frequency')
+    st.pyplot(plt.gcf())
 
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+    # Korelaciona heatmap
+    st.subheader('Correlation Heatmap')
+    plt.figure(figsize=(10, 6))
+    corr = df_filtered[['Production Time', 'Temperature', 'Humidity']].corr()
+    sns.heatmap(corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.title('Correlation Heatmap')
+    st.pyplot(plt.gcf())
 
-st.header(f'GDP in {to_year}', divider='gray')
+    # Pairplot
+    st.subheader('Pairplot')
+    plt.figure(figsize=(10, 6))
+    sns.pairplot(df_filtered[['Production Time', 'Temperature', 'Humidity']])
+    st.pyplot(plt.gcf())
+def show_defects_analytics():
+    # Učitaj podatke
+    df = pd.read_csv('defects.csv')
+    #df = pd.read_json('http://localhost:3001/defectsdata')
+    df['Date']=pd.to_datetime(df['Date']).dt.date
+    # Prikaži naslov
+    st.title('Defects Summary Dashboard')
 
-''
+    # Dodaj sidebar za filtriranje
+    st.sidebar.title("Filters")
+    selected_date = st.sidebar.selectbox('Select Date', df['Date'].unique())
+    filtered_df = df[df['Date'] == selected_date]
 
-cols = st.columns(4)
+    # Prikaži osnovne informacije koristeći st.metric
+    total_defects = filtered_df['Total Defects'].sum()
+    average_defects = filtered_df['Total Defects'].mean()
+    max_defects = filtered_df['Total Defects'].max()
+    min_defects = filtered_df['Total Defects'].min()
 
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
+    st.metric(label="Total Defects", value=total_defects)
+    st.metric(label="Average Defects per Interval", value=f"{average_defects:.2f}")
+    st.metric(label="Max Defects in an Interval", value=max_defects)
+    st.metric(label="Min Defects in an Interval", value=min_defects)
 
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
+    # Grafikon totalnih defekata po vremenskim intervalima
+    st.subheader('Total Defects per 15-Minute Interval')
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=filtered_df, x='Time Range', y='Total Defects', palette='viridis')
+    plt.xticks(rotation=45)
+    plt.xlabel('Time Range')
+    plt.ylabel('Total Defects')
+    plt.title(f'Total Defects for {selected_date}')
+    st.pyplot(plt.gcf())
 
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
+    # Histogram totalnih defekata
+    st.subheader('Histogram of Total Defects')
+    plt.figure(figsize=(10, 4))
+    sns.histplot(filtered_df['Total Defects'], bins=10, kde=True, color='blue')
+    plt.xlabel('Total Defects')
+    plt.ylabel('Frequency')
+    plt.title('Histogram of Total Defects')
+    st.pyplot(plt.gcf())
 
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+    # Line plot za broj defekata po vremenskim intervalima
+    st.subheader('Line Plot of Defects per 15-Minute Interval')
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=filtered_df, x='Time Range', y='Total Defects', marker='o', color='red')
+    plt.xticks(rotation=45)
+    plt.xlabel('Time Range')
+    plt.ylabel('Total Defects')
+    plt.title(f'Line Plot of Defects for {selected_date}')
+    st.pyplot(plt.gcf())
+
+    st.subheader('Heatmap of Defects per Time Range')
+    # Pripremi podatke za heatmap
+    heatmap_data = pd.pivot_table(filtered_df, values='Total Defects', index='Time Range', aggfunc='sum')
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(heatmap_data, annot=True, cmap='YlGnBu', fmt='g')
+    plt.xlabel('Time Range')
+    plt.ylabel('Total Defects')
+    plt.title(f'Heatmap of Defects for {selected_date}')
+    st.pyplot(plt.gcf())
+def show_datasets():
+    st.subheader('Telemetry dataset')
+    st.dataframe(pd.read_json('http://localhost:3001/telemetrydata'))
+    st.subheader('Defects dataset')
+    st.dataframe(pd.read_json('http://localhost:3001/defectsdata'))
+def main():
+    st.sidebar.title("Navigation")
+    selection = st.sidebar.radio("Go to", ["Telemetry data", "Defects data","Datasets"])
+    
+    if selection == "Telemetry data":
+        show_telemetry_analytics()
+    elif selection == "Defects data":
+        show_defects_analytics()
+    elif selection == "Datasets":
+        show_datasets()
+if __name__ == "__main__":
+    main()
