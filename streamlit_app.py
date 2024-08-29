@@ -7,7 +7,7 @@ import seaborn as sns
 
 def show_telemetry_analytics():
     # Učitaj podatke
-    df = pd.read_csv('telemetry.csv')
+    df = pd.read_csv('data/telemetry.csv')
     #df = pd.read_json('http://localhost:3001/telemetrydata')
     
     # Pretvori kolone 'Date' i 'Start Time' u datetime format
@@ -108,7 +108,7 @@ def show_telemetry_analytics():
     st.pyplot(plt.gcf())
 def show_defects_analytics():
     # Učitaj podatke
-    df = pd.read_csv('defects.csv')
+    df = pd.read_csv('data/defects.csv')
     #df = pd.read_json('http://localhost:3001/defectsdata')
     df['Date']=pd.to_datetime(df['Date']).dt.date
     # Prikaži naslov
@@ -170,9 +170,9 @@ def show_defects_analytics():
     st.pyplot(plt.gcf())
 def show_datasets():
     st.subheader('Telemetry dataset')
-    st.dataframe(pd.read_json('http://localhost:3001/telemetrydata'))
+    st.dataframe(pd.read_json('data/telemetrydata'))
     st.subheader('Defects dataset')
-    st.dataframe(pd.read_json('http://localhost:3001/defectsdata'))
+    st.dataframe(pd.read_json('data/defectsdata'))
 def main():
     st.sidebar.title("Navigation")
     selection = st.sidebar.radio("Go to", ["Telemetry data", "Defects data","Datasets"])
