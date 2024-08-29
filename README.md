@@ -1,6 +1,6 @@
 # Simple Industrial Process Simulation Data Visualization
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdp-dashboard-template.streamlit.app/)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://st-ips.streamlit.app/)
 
 ### How to run it on your own machine
 
